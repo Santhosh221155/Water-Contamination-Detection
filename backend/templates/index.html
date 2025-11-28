@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Water Quality Monitor | AI Dashboard</title>
+    <link rel="stylesheet" href="/static/css/common.css">
+    <link rel="stylesheet" href="/static/css/main.css">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600&display=swap"
+        rel="stylesheet">
+</head>
+
+<body>
+    <!-- Header -->
+    <header class="dashboard-header">
+        <div class="logo-area">
+            <h1>💧 Water Quality Monitor</h1>
+        </div>
+        <div class="header-controls">
+            <div id="connectionStatus" class="status-badge disconnected">
+                <span class="status-dot"></span> Disconnected
+            </div>
+            <div id="bridgeStatus" class="status-badge bridge-badge disconnected">
+                <span class="status-dot"></span> Bridge: Waiting...
+            </div>
+            <a href="/history" class="nav-btn">📊 History</a>
+        </div>
+    </header>
+
+    <main class="dashboard-grid">
+        <div class="glass-card prediction-card">
+            <div class="section-title">Real-time Analysis</div>
+
+            <div id="predictionResult" class="prediction-display waiting">
+                <div class="pred-icon">🌊</div>
+                <div class="pred-value">Waiting for Data...</div>
+                <div class="pred-conf">AI Confidence: --%</div>
+            </div>
+
+            <!-- Stats Row -->
+            <div class="stats-row">
+                <div class="stat-item">
+                    <span class="stat-label">Total Samples</span>
+                    <span class="stat-value" id="totalSamples">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Safety Ratio</span>
+                    <span class="stat-value" id="accuracy">0%</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Streak</span>
+                    <span class="stat-value" id="consecutiveCount">0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Row 2: Sensor Telemetry -->
+        <div>
+            <div class="section-title">Sensor Telemetry</div>
+            <div class="sensors-grid">
+                <!-- pH -->
+                <div class="sensor-widget" data-sensor="pH">
+                    <div class="sensor-header">
+                        <span class="sensor-label">pH Level</span>
+                        <span class="sensor-status" id="status-pH">--</span>
+                    </div>
+                    <div class="sensor-value" id="sensor-pH">--</div>
+                    <div class="sensor-range">Safe: 6.5 - 8.5</div>
+                </div>
+
+                <!-- Sulphate -->
+                <div class="sensor-widget" data-sensor="Sulphate">
+                    <div class="sensor-header">
+                        <span class="sensor-label">Sulphate</span>
+                        <span class="sensor-status" id="status-Sulphate">--</span>
+                    </div>
+                    <div class="sensor-value" id="sensor-Sulphate">--</div>
+                    <div class="sensor-unit">mg/L</div>
+                    <div class="sensor-range">Safe: 100 - 400</div>
+                </div>
+
+                <!-- Hardness -->
+                <div class="sensor-widget" data-sensor="Hardness">
+                    <div class="sensor-header">
+                        <span class="sensor-label">Hardness</span>
+                        <span class="sensor-status" id="status-Hardness">--</span>
+                    </div>
+                    <div class="sensor-value" id="sensor-Hardness">--</div>
+                    <div class="sensor-unit">mg/L</div>
+                    <div class="sensor-range">Safe: 80 - 250</div>
+                </div>
+
+                <!-- Conductivity -->
+                <div class="sensor-widget" data-sensor="Conductivity">
+                    <div class="sensor-header">
+                        <span class="sensor-label">Conductivity</span>
+                        <span class="sensor-status" id="status-Conductivity">--</span>
+                    </div>
+                    <div class="sensor-value" id="sensor-Conductivity">--</div>
+                    <div class="sensor-unit">μS/cm</div>
+                    <div class="sensor-range">Safe: 200 - 800</div>
+                </div>
+
+                <!-- TDS -->
+                <div class="sensor-widget" data-sensor="TDS">
+                    <div class="sensor-header">
+                        <span class="sensor-label">TDS</span>
+                        <span class="sensor-status" id="status-TDS">--</span>
+                    </div>
+                    <div class="sensor-value" id="sensor-TDS">--</div>
+                    <div class="sensor-unit">ppm</div>
+                    <div class="sensor-range">Safe: 200 - 1000</div>
+                </div>
+
+                <!-- Turbidity -->
+                <div class="sensor-widget" data-sensor="Turbidity">
+                    <div class="sensor-header">
+                        <span class="sensor-label">Turbidity</span>
+                        <span class="sensor-status" id="status-Turbidity">--</span>
+                    </div>
+                    <div class="sensor-value" id="sensor-Turbidity">--</div>
+                    <div class="sensor-unit">NTU</div>
+                    <div class="sensor-range">Safe: 1.5 - 5.0</div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Alert Banner (Hidden by default) -->
+    <div id="alertBanner" class="alert-banner hidden"
+        style="position: fixed; bottom: 20px; right: 20px; z-index: 1000; background: rgba(255, 0, 85, 0.9); padding: 20px; border-radius: 12px; color: white; display: none;">
+        <div class="alert-content">
+            <strong>🚨 CRITICAL ALERT</strong>
+            <p>High Contamination Detected!</p>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="/static/js/main.js"></script>
+</body>
+
+</html>

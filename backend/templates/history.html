@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Water Quality History | AI Dashboard</title>
+    <link rel="stylesheet" href="/static/css/common.css">
+    <link rel="stylesheet" href="/static/css/main.css">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+    <!-- Header -->
+    <header class="dashboard-header">
+        <div class="logo-area">
+            <h1>📈 Historical Analytics</h1>
+        </div>
+        <div class="header-controls">
+            <div class="status-badge connected">
+                <span class="status-dot"></span> Live Data
+            </div>
+            <a href="/" class="nav-btn">← Dashboard</a>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="history-container">
+        <div class="charts-grid">
+            <div class="chart-card">
+                <h3>pH Levels</h3>
+                <div class="chart-container">
+                    <canvas id="phChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-card">
+                <h3>Sulphate (mg/L)</h3>
+                <div class="chart-container">
+                    <canvas id="sulphateChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-card">
+                <h3>Hardness (mg/L)</h3>
+                <div class="chart-container">
+                    <canvas id="hardnessChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-card">
+                <h3>Turbidity (NTU)</h3>
+                <div class="chart-container">
+                    <canvas id="turbidityChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-card">
+                <h3>TDS (ppm)</h3>
+                <div class="chart-container">
+                    <canvas id="tdsChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-card">
+                <h3>Conductivity (μS/cm)</h3>
+                <div class="chart-container">
+                    <canvas id="conductivityChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Chart Configuration
+        Chart.defaults.color = '#94a3b8';
+        Chart.defaults.font.family = "'Inter', sans-serif";
+
+        let charts = {};
+
+        async function loadHistory() {
+            try {
+                const response = await fetch('/api/history');
+                const data = await response.json();
+
+                if (data.length === 0) {
+                    console.log("No data available");
+                    return;
+                }
+
+                const labels = data.map(d => new Date(d.timestamp).toLocaleTimeString());
+
+                createChart('phChart', 'pH', labels, data.map(d => d.pH), '#00f2ff');
+                createChart('sulphateChart', 'Sulphate', labels, data.map(d => d.Sulphate), '#ff0055');
+                createChart('hardnessChart', 'Hardness', labels, data.map(d => d.Hardness), '#bd00ff');
+                createChart('turbidityChart', 'Turbidity', labels, data.map(d => d.Turbidity), '#ff9f00');
+                createChart('tdsChart', 'TDS', labels, data.map(d => d.TDS), '#00ff9d');
+                createChart('conductivityChart', 'Conductivity', labels, data.map(d => d.Conductivity), '#7000ff');
+
+            } catch (error) {
+                console.error("Error loading history:", error);
+            }
+        }
+
+        function createChart(canvasId, label, labels, data, color) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+
+            // Create Gradient
+            const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+            gradient.addColorStop(0, color + '40'); // 25% opacity
+            gradient.addColorStop(1, color + '00'); // 0% opacity
+
+            // Destroy existing chart if updating
+            if (charts[canvasId]) {
+                charts[canvasId].destroy();
+            }
+
+            charts[canvasId] = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: label,
+                        data: data,
+                        borderColor: color,
+                        backgroundColor: gradient,
+                        borderWidth: 3,
+                        tension: 0.4, // Smooth curves
+                        fill: true,
+                        pointRadius: 0,
+                        pointHoverRadius: 6,
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: color,
+                        pointHoverBorderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                            titleColor: '#fff',
+                            bodyColor: '#94a3b8',
+                            borderColor: 'rgba(255, 255, 255, 0.1)',
+                            borderWidth: 1,
+                            padding: 10,
+                            displayColors: false,
+                            callbacks: {
+                                label: function (context) {
+                                    return context.parsed.y.toFixed(1) + ' ' + label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            display: false,
+                            grid: { display: false }
+                        },
+                        y: {
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.05)',
+                                borderDash: [5, 5]
+                            },
+                            ticks: {
+                                color: '#64748b',
+                                font: { size: 11 }
+                            },
+                            border: { display: false }
+                        }
+                    }
+                }
+            });
+        }
+
+        loadHistory();
+        // Refresh every 5 seconds for "live" feel
+        setInterval(loadHistory, 5000);
+    </script>
+</body>
+
+</html>
