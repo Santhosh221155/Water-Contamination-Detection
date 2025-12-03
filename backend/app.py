@@ -28,7 +28,7 @@ socketio = SocketIO(app, cors_allowed_origins="*", ping_interval=config.WEBSOCKE
 # MQTT Configuration
 MQTT_BROKER = "test.mosquitto.org"
 MQTT_PORT = 8080
-MQTT_TOPIC = "water_quality/telemetry"
+MQTT_TOPIC = "tn/water/telemetry"
 
 # Initialize MongoDB
 try:

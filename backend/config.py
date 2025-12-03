@@ -53,11 +53,11 @@ WEBSOCKET_PING_INTERVAL = 25
 WEBSOCKET_PING_TIMEOUT = 60
 
 # Model Path
-MODEL_PATH = "tamilnadu_water_model.joblib"
+MODEL_PATH = "tamilnadu_water_model_v4.joblib"
 
 # Wokwi Configuration
 # Get your project ID from the Wokwi project URL: https://wokwi.com/projects/<PROJECT_ID>
-WOKWI_PROJECT_ID = "448703663779075073"  # Your Wokwi project ID
+WOKWI_PROJECT_ID = "449326206391500801"  # Your Wokwi project ID
 
 # Browser-Based Serial Capture (Set to False for VS Code Bridge workflow)
 USE_BROWSER_SERIAL = False

@@ -1,140 +1,109 @@
 #include <WiFi.h>
 #include <PubSubClient.h>
 
-// Pin definitions (Using ADC1 only for WiFi compatibility)
-const int POT_PH = 36;          // VP
-const int POT_SULPHATE = 39;    // VN
-const int POT_HARDNESS = 34;
-const int POT_CONDUCTIVITY = 35;
-const int POT_TDS = 32;
-const int POT_TURBIDITY = 33;
+// ADC pins (ESP32 ADC1 - stable for WiFi use)
+#define PIN_PH          36   // VP
+#define PIN_SULPHATE    39   // VN
+#define PIN_HARDNESS    34
+#define PIN_CONDUCT     35
+#define PIN_TDS         32
+#define PIN_TURBIDITY   33
 
-const int LED_GREEN = 13; 
-const int LED_RED = 12;
-
-// Wi-Fi & MQTT Credentials
+// WiFi & MQTT
 const char* ssid = "Wokwi-GUEST";
 const char* password = "";
 const char* mqtt_server = "test.mosquitto.org";
-const char* mqtt_topic = "water_quality/telemetry";
+
+const char* PUBLISH_TOPIC = "tn/water/telemetry";
 
 WiFiClient espClient;
 PubSubClient client(espClient);
 
-// Sensor ranges
-struct SensorRange {
-    float min;
-    float max;
+// Sensor range mapping (min, max) for potentiometers → real scale
+struct Range {
+  float min;
+  float max;
 };
 
-SensorRange ranges[] = {
-    {5.5, 8.8},      
-    {69, 496},       
-    {66, 281},       
-    {152, 895},      
-    {137, 1178},     
-    {1.3, 9.4}      
+Range sensorRanges[] = {
+  {5.0,  9.5},    // pH
+  {60,  900},     // Sulphate
+  {40,  800},     // Hardness
+  {150, 3000},    // Conductivity
+  {100, 2000},    // TDS
+  {1.0, 25.0}     // Turbidity
 };
 
 void setup_wifi() {
-    delay(10);
-    Serial.println("--- SETUP WIFI START ---");
-    Serial.print("Connecting to ");
-    Serial.println(ssid);
+  Serial.println("\nConnecting to WiFi...");
+  WiFi.begin(ssid, password);
 
-    WiFi.begin(ssid, password);
+  int retries = 0;
+  while (WiFi.status() != WL_CONNECTED && retries < 20) {
+    delay(300);
+    Serial.print(".");
+    retries++;
+  }
 
-    int timeout = 0;
-    while (WiFi.status() != WL_CONNECTED && timeout < 20) {
-        delay(500);
-        Serial.print(".");
-        timeout++;
-    }
-
-    if (WiFi.status() == WL_CONNECTED) {
-        Serial.println("");
-        Serial.println("WiFi connected");
-        Serial.println("IP address: ");
-        Serial.println(WiFi.localIP());
-    } else {
-        Serial.println("\n❌ WiFi Connection Failed! Check Wokwi Gateway.");
-    }
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("\nWiFi connected ✔");
+    Serial.println("IP: " + WiFi.localIP().toString());
+  } else {
+    Serial.println("\n⚠ WiFi FAILED! Check Wokwi settings.");
+  }
 }
 
-int predict_water_quality(float pH, float sulphate, float hardness, 
-                          float conductivity, float tds, float turbidity) {
-    if (pH < 6.0 || pH > 8.5) return 0;
-    if (turbidity > 6.0) return 0;
-    if (tds > 900) return 0;
-    return 1; 
+void reconnect_mqtt() {
+  while (!client.connected()) {
+    Serial.println("Connecting to MQTT...");
+    String clientId = "ESP32-" + String(random(9999));
+    if (client.connect(clientId.c_str())) {
+      Serial.println("MQTT connected ✔");
+    } else {
+      delay(1000);
+    }
+  }
+}
+
+float readMappedValue(int pin, Range r) {
+  int raw = analogRead(pin);
+  float mapped = map(raw, 0, 4095, r.min * 100, r.max * 100) / 100.0;
+  return mapped;
 }
 
 void setup() {
-    Serial.begin(115200);
-    pinMode(LED_GREEN, OUTPUT);
-    pinMode(LED_RED, OUTPUT);
-    analogReadResolution(12); 
+  Serial.begin(115200);
+  analogReadResolution(12);
 
-    setup_wifi();
-    client.setServer(mqtt_server, 1883);
-}
-
-float readSensor(int pin, int sensorIndex) {
-    int rawValue = analogRead(pin);
-    float value = map(rawValue, 0, 4095, 
-                     ranges[sensorIndex].min * 100, 
-                     ranges[sensorIndex].max * 100) / 100.0;
-    return value;
+  setup_wifi();
+  client.setServer(mqtt_server, 1883);
 }
 
 void loop() {
-    // Non-blocking MQTT connection
-    if (!client.connected()) {
-        String clientId = "ESP32Client-";
-        clientId += String(random(0xffff), HEX);
-        if (client.connect(clientId.c_str())) {
-             Serial.println("MQTT Connected");
-        }
-    } else {
-        client.loop();
-    }
+  if (!client.connected()) reconnect_mqtt();
+  client.loop();
 
-    float pH = readSensor(POT_PH, 0);
-    float sulphate = readSensor(POT_SULPHATE, 1);
-    float hardness = readSensor(POT_HARDNESS, 2);
-    float conductivity = readSensor(POT_CONDUCTIVITY, 3);
-    float tds = readSensor(POT_TDS, 4);
-    float turbidity = readSensor(POT_TURBIDITY, 5);
+  // Read all sensors
+  float pH          = readMappedValue(PIN_PH, sensorRanges[0]);
+  float sulphate    = readMappedValue(PIN_SULPHATE, sensorRanges[1]);
+  float hardness    = readMappedValue(PIN_HARDNESS, sensorRanges[2]);
+  float conductivity= readMappedValue(PIN_CONDUCT, sensorRanges[3]);
+  float tds         = readMappedValue(PIN_TDS, sensorRanges[4]);
+  float turbidity   = readMappedValue(PIN_TURBIDITY, sensorRanges[5]);
 
-    int prediction = predict_water_quality(
-        pH, sulphate, hardness, conductivity, tds, turbidity
-    );
+  // Create JSON string for ML backend
+  String json = "{";
+  json += "\"pH\":" + String(pH, 2) + ",";
+  json += "\"Sulphate\":" + String(sulphate, 2) + ",";
+  json += "\"Hardness\":" + String(hardness, 2) + ",";
+  json += "\"Conductivity\":" + String(conductivity, 2) + ",";
+  json += "\"TDS\":" + String(tds, 2) + ",";
+  json += "\"Turbidity\":" + String(turbidity, 2);
+  json += "}";
 
-    if (prediction == 1) {
-        digitalWrite(LED_GREEN, HIGH);
-        digitalWrite(LED_RED, LOW);
-    } else {
-        digitalWrite(LED_GREEN, LOW);
-        digitalWrite(LED_RED, HIGH);
-    }
+  Serial.println("📤 Sending: " + json);
 
-    // Create JSON string
-    String json = "{";
-    json += "\"pH\":" + String(pH, 1) + ",";
-    json += "\"Sulphate\":" + String(sulphate, 0) + ",";
-    json += "\"Hardness\":" + String(hardness, 0) + ",";
-    json += "\"Conductivity\":" + String(conductivity, 0) + ",";
-    json += "\"TDS\":" + String(tds, 0) + ",";
-    json += "\"Turbidity\":" + String(turbidity, 1) + ",";
-    json += "\"prediction\":" + String(prediction) + ",";
-    json += "\"prediction_text\":\"" + String(prediction == 1 ? "Safe" : "Unsafe") + "\"";
-    json += "}";
+  client.publish(PUBLISH_TOPIC, json.c_str());
 
-    Serial.println(json);
-    
-    if (client.connected()) {
-        client.publish(mqtt_topic, json.c_str());
-    }
-
-    delay(2000);
+  delay(1000);  // send every second
 }

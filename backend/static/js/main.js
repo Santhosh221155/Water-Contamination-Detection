@@ -160,11 +160,16 @@ function updateSensorReadings(sensorData, thresholds) {
             const isSafe = threshold.is_safe;
 
             // Update card class
-            cardElement.className = `sensor-widget ${isSafe ? 'safe' : 'unsafe'}`;
+            // cardElement.className = `sensor-widget ${isSafe ? 'safe' : 'unsafe'}`;
 
             // Update status text
+            // statusElement.textContent = isSafe ? 'Normal' : 'Critical';
+            // statusElement.className = `sensor-status ${isSafe ? 'safe' : 'unsafe'}`;
+
+            // Per user request: Remove color coding for input data
+            cardElement.className = `sensor-widget`;
             statusElement.textContent = isSafe ? 'Normal' : 'Critical';
-            statusElement.className = `sensor-status ${isSafe ? 'safe' : 'unsafe'}`;
+            statusElement.className = `sensor-status`;
         }
     });
 }
